@@ -28,6 +28,18 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
+bootBuildImage {
+    imageName = "mc-player-service:dev"
+
+    docker {
+        publishRegistry {
+            url = "https://ghcr.io"
+            username = System.getenv("REGISTRY_USERNAME")
+            password = System.getenv("REGISTRY_PASSWORD")
+        }
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
