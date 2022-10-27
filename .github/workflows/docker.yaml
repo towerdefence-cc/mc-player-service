@@ -27,5 +27,5 @@ jobs:
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
           arguments: "bootBuildImage
-            --imageName=ghcr.io/towerdefence-cc/${{ github.repository }}:${{ github.sha }}
+            --imageName=ghcr.io/${{ github.repository }}:${{ github.sha }}
             --publishImage"
