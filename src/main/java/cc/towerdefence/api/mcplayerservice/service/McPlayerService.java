@@ -44,10 +44,11 @@ public class McPlayerService {
         Date date = Date.from(Instant.now());
         Optional<Player> optionalPlayer = this.playerRepository.findById(playerId);
 
-        boolean updatedUsername = false;
+        boolean updatedUsername = optionalPlayer.isEmpty() || !optionalPlayer.get().getCurrentUsername().equals(request.getUsername());
 
+        Player player;
         if (optionalPlayer.isEmpty()) {
-            Player player = new Player(
+            player = new Player(
                     playerId,
                     request.getUsername(),
                     date,
@@ -55,14 +56,13 @@ public class McPlayerService {
                     true,
                     Duration.ZERO
             );
-
-            this.playerRepository.save(player);
         } else {
-            Player player = optionalPlayer.get();
+            player = optionalPlayer.get();
             player.setCurrentUsername(request.getUsername());
             player.setCurrentlyOnline(true);
-            this.playerRepository.save(player);
         }
+
+        this.playerRepository.save(player);
 
         PlayerSession session = new PlayerSession(new ObjectId(date), playerId, null);
         this.playerSessionRepository.save(session);
