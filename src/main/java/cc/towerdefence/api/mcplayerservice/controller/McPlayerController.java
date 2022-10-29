@@ -48,7 +48,6 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
 
         responseObserver.onNext(McPlayerProto.PlayersResponse.newBuilder().addAllPlayers(players).build());
         responseObserver.onCompleted();
-        super.getPlayers(request, responseObserver);
     }
 
     @Override
