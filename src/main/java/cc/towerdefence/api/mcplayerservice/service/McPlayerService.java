@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +31,12 @@ public class McPlayerService {
 
     public Player getPlayer(UUID uuid) {
         return this.playerRepository.findById(uuid).orElse(null);
+    }
+
+    public List<Player> getPlayers(List<UUID> uuids) {
+        List<Player> result = new ArrayList<>();
+        this.playerRepository.findAllById(uuids).forEach(result::add);
+        return result;
     }
 
     public Player getPlayerByUsername(String username) {

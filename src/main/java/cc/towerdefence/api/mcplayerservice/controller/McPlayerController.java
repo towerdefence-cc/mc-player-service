@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @GrpcService
 @Controller
@@ -36,6 +37,18 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
 
         responseObserver.onNext(this.convertPlayer(player));
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getPlayers(McPlayerProto.PlayersRequest request, StreamObserver<McPlayerProto.PlayersResponse> responseObserver) {
+        List<McPlayerProto.PlayerResponse> players = this.mcPlayerService.getPlayers(request.getPlayerIdsList().stream().map(UUID::fromString).toList())
+                .stream()
+                .map(this::convertPlayer)
+                .toList();
+
+        responseObserver.onNext(McPlayerProto.PlayersResponse.newBuilder().addAllPlayers(players).build());
+        responseObserver.onCompleted();
+        super.getPlayers(request, responseObserver);
     }
 
     @Override

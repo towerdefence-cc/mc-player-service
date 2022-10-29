@@ -6,9 +6,9 @@ plugins {
     id("io.freefair.lombok") version "6.5.1"
 }
 
-group = 'cc.towerdefence.api'
-version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '17'
+group = "cc.towerdefence.api"
+version = "0.0.1-SNAPSHOT"
+sourceCompatibility = "17"
 
 repositories {
     mavenCentral()
@@ -22,7 +22,7 @@ dependencies {
     implementation("net.devh:grpc-server-spring-boot-starter:2.13.1.RELEASE") {
         exclude group: "io.grpc", module: "grpc-netty-shaded" // causes version conflicts, provided by the proto SDK
     }
-    implementation("cc.towerdefence.api:grpc-sdk:22f2328")
+    implementation("cc.towerdefence.api:grpc-sdk:7b3df99")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -40,6 +40,6 @@ bootBuildImage {
     }
 }
 
-tasks.named('test') {
+test {
     useJUnitPlatform()
 }
