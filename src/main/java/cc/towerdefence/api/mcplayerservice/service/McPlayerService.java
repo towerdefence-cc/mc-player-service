@@ -7,7 +7,6 @@ import cc.towerdefence.api.mcplayerservice.repository.PlayerRepository;
 import cc.towerdefence.api.mcplayerservice.repository.PlayerSessionRepository;
 import cc.towerdefence.api.mcplayerservice.repository.PlayerUsernameRepository;
 import cc.towerdefence.api.service.McPlayerProto;
-import cc.towerdefence.api.utils.GrpcTimestampConverter;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
@@ -18,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,7 +62,8 @@ public class McPlayerService {
                     date,
                     date,
                     true,
-                    Duration.ZERO
+                    Duration.ZERO,
+                    new HashSet<>()
             );
         } else {
             player = optionalPlayer.get();
@@ -92,7 +93,7 @@ public class McPlayerService {
 
         player.setCurrentlyOnline(false);
         player.setLastOnline(Date.from(Instant.now()));
-        player.setTotalPlayTime(player.getTotalPlayTime().plus(session.getDuration())); // todo this seems to add the wrong amount
+        player.setTotalPlayTime(player.getTotalPlayTime().plus(session.getDuration()));
         this.playerRepository.save(player);
     }
 }

@@ -5,13 +5,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
 
 @Document(collection = "mcPlayer")
@@ -35,4 +34,6 @@ public class Player {
     private boolean currentlyOnline;
 
     private Duration totalPlayTime;
+
+    private Set<String> yubiKeyIdentities;
 }

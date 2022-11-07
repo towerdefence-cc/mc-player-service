@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface PlayerRepository extends MongoRepository<Player, UUID> {
 
     Optional<Player> findByCurrentUsernameIgnoreCaseOrderById(String username);
+
+    boolean existsByIdAndYubiKeyIdentitiesContains(UUID id, String yubiKeyId);
 }

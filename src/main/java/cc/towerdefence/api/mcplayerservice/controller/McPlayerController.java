@@ -3,6 +3,7 @@ package cc.towerdefence.api.mcplayerservice.controller;
 import cc.towerdefence.api.mcplayerservice.model.Player;
 import cc.towerdefence.api.mcplayerservice.model.PlayerSession;
 import cc.towerdefence.api.mcplayerservice.service.McPlayerService;
+import cc.towerdefence.api.model.common.PlayerProto;
 import cc.towerdefence.api.service.McPlayerGrpc;
 import cc.towerdefence.api.service.McPlayerProto;
 import cc.towerdefence.api.utils.GrpcDurationConverter;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @GrpcService
 @Controller
@@ -27,7 +27,7 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
     private final McPlayerService mcPlayerService;
 
     @Override
-    public void getPlayer(McPlayerProto.PlayerRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
+    public void getPlayer(PlayerProto.PlayerRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
         Player player = this.mcPlayerService.getPlayer(UUID.fromString(request.getPlayerId()));
 
         if (player == null) {
@@ -40,7 +40,7 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
     }
 
     @Override
-    public void getPlayers(McPlayerProto.PlayersRequest request, StreamObserver<McPlayerProto.PlayersResponse> responseObserver) {
+    public void getPlayers(PlayerProto.PlayersRequest request, StreamObserver<McPlayerProto.PlayersResponse> responseObserver) {
         List<McPlayerProto.PlayerResponse> players = this.mcPlayerService.getPlayers(request.getPlayerIdsList().stream().map(UUID::fromString).toList())
                 .stream()
                 .map(this::convertPlayer)
@@ -51,7 +51,7 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
     }
 
     @Override
-    public void getPlayerByUsername(McPlayerProto.PlayerUsernameRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
+    public void getPlayerByUsername(PlayerProto.PlayerUsernameRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
         Player player = this.mcPlayerService.getPlayerByUsername(request.getUsername());
 
         if (player == null) {
@@ -71,6 +71,7 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
                 .setLastOnline(GrpcTimestampConverter.convert(player.getLastOnline().toInstant()))
                 .setCurrentlyOnline(player.isCurrentlyOnline())
                 .setPlayTime(GrpcDurationConverter.convert(player.getTotalPlayTime()))
+                .setOtpEnabled(player.getYubiKeyIdentities() != null && !player.getYubiKeyIdentities().isEmpty())
                 .build();
     }
 
