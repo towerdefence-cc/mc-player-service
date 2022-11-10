@@ -7,10 +7,13 @@ import cc.towerdefence.api.mcplayerservice.repository.PlayerRepository;
 import cc.towerdefence.api.mcplayerservice.repository.PlayerSessionRepository;
 import cc.towerdefence.api.mcplayerservice.repository.PlayerUsernameRepository;
 import cc.towerdefence.api.service.McPlayerProto;
+import cc.towerdefence.api.utils.GrpcDurationConverter;
+import cc.towerdefence.api.utils.GrpcTimestampConverter;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -21,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -29,18 +33,40 @@ public class McPlayerService {
     private final PlayerSessionRepository playerSessionRepository;
     private final PlayerUsernameRepository playerUsernameRepository;
 
-    public Player getPlayer(UUID uuid) {
-        return this.playerRepository.findById(uuid).orElse(null);
+    public McPlayerProto.PlayerResponse getPlayer(UUID uuid) {
+        return this.playerRepository.findById(uuid).map(this::convertPlayer).orElse(null);
     }
 
-    public List<Player> getPlayers(List<UUID> uuids) {
-        List<Player> result = new ArrayList<>();
-        this.playerRepository.findAllById(uuids).forEach(result::add);
-        return result;
+    public List<McPlayerProto.PlayerResponse> getPlayers(List<UUID> uuids) {
+        return StreamSupport.stream(this.playerRepository.findAllById(uuids).spliterator(), true)
+                .map(this::convertPlayer)
+                .toList();
     }
 
-    public Player getPlayerByUsername(String username) {
-        return this.playerRepository.findByCurrentUsernameIgnoreCaseOrderById(username).orElse(null);
+    public McPlayerProto.PlayerResponse getPlayerByUsername(String username) {
+        Optional<Player> optionalPlayer = this.playerRepository.findByCurrentUsernameIgnoreCaseOrderById(username);
+        if (optionalPlayer.isEmpty()) return null;
+
+        Player player = optionalPlayer.get();
+
+        return this.convertPlayer(player);
+    }
+
+    public Page<McPlayerProto.PlayerResponse> searchPlayerByUsername(McPlayerProto.PlayerSearchRequest request) {
+        String username = request.getUsername();
+        Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
+        McPlayerProto.PlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
+
+        // todo implement methods
+        Page<Player> page = switch (filterMethod) {
+            case NONE -> this.playerRepository.findAllByCurrentUsernameIgnoreCaseOrderById(username, pageable);
+            case ONLINE -> this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
+            case FRIENDS -> throw new UnsupportedOperationException("Not implemented yet");
+            case UNRECOGNIZED -> throw new UnsupportedOperationException("Not implemented yet");
+        };
+
+        return page.map(this::convertPlayer);
+
     }
 
     public Page<PlayerSession> getPlayerSessions(UUID playerId, int page) {
@@ -95,5 +121,34 @@ public class McPlayerService {
         player.setLastOnline(Date.from(Instant.now()));
         player.setTotalPlayTime(player.getTotalPlayTime().plus(session.getDuration()));
         this.playerRepository.save(player);
+    }
+
+    private McPlayerProto.PlayerSession convertSession(PlayerSession session) {
+        McPlayerProto.PlayerSession.Builder builder = McPlayerProto.PlayerSession.newBuilder()
+                .setSessionId(session.getId().toString())
+                .setLoginTime(GrpcTimestampConverter.convertMillis(session.getId().getTimestamp() * 1000L));
+
+        if (session.getLogoutTime() != null)
+                builder.setLogoutTime(GrpcTimestampConverter.convert(session.getLogoutTime().toInstant()));
+
+        return builder.build();
+    }
+
+    private McPlayerProto.PlayerResponse convertPlayer(Player player) {
+        McPlayerProto.PlayerResponse.Builder builder =  McPlayerProto.PlayerResponse.newBuilder()
+                .setId(player.getId().toString())
+                .setCurrentUsername(player.getCurrentUsername())
+                .setFirstLogin(GrpcTimestampConverter.convert(player.getFirstLogin().toInstant()))
+                .setLastOnline(GrpcTimestampConverter.convert(player.getLastOnline().toInstant()))
+                .setCurrentlyOnline(player.isCurrentlyOnline())
+                .setPlayTime(GrpcDurationConverter.convert(player.getTotalPlayTime()))
+                .setOtpEnabled(player.getYubiKeyIdentities() != null && !player.getYubiKeyIdentities().isEmpty());
+
+        if (player.isCurrentlyOnline()) {
+            this.playerSessionRepository.findActiveSessionByPlayerId(player.getId())
+                    .ifPresent(session -> builder.setCurrentSession(this.convertSession(session)));
+        }
+
+        return builder.build();
     }
 }

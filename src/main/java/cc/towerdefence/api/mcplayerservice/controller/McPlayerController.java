@@ -3,7 +3,7 @@ package cc.towerdefence.api.mcplayerservice.controller;
 import cc.towerdefence.api.mcplayerservice.model.Player;
 import cc.towerdefence.api.mcplayerservice.model.PlayerSession;
 import cc.towerdefence.api.mcplayerservice.service.McPlayerService;
-import cc.towerdefence.api.model.common.PlayerProto;
+import cc.towerdefence.api.model.PlayerProto;
 import cc.towerdefence.api.service.McPlayerGrpc;
 import cc.towerdefence.api.service.McPlayerProto;
 import cc.towerdefence.api.utils.GrpcDurationConverter;
@@ -28,23 +28,20 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
 
     @Override
     public void getPlayer(PlayerProto.PlayerRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
-        Player player = this.mcPlayerService.getPlayer(UUID.fromString(request.getPlayerId()));
+        McPlayerProto.PlayerResponse response = this.mcPlayerService.getPlayer(UUID.fromString(request.getPlayerId()));
 
-        if (player == null) {
+        if (response == null) {
             responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
             return;
         }
 
-        responseObserver.onNext(this.convertPlayer(player));
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 
     @Override
     public void getPlayers(PlayerProto.PlayersRequest request, StreamObserver<McPlayerProto.PlayersResponse> responseObserver) {
-        List<McPlayerProto.PlayerResponse> players = this.mcPlayerService.getPlayers(request.getPlayerIdsList().stream().map(UUID::fromString).toList())
-                .stream()
-                .map(this::convertPlayer)
-                .toList();
+        List<McPlayerProto.PlayerResponse> players = this.mcPlayerService.getPlayers(request.getPlayerIdsList().stream().map(UUID::fromString).toList());
 
         responseObserver.onNext(McPlayerProto.PlayersResponse.newBuilder().addAllPlayers(players).build());
         responseObserver.onCompleted();
@@ -52,14 +49,29 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
 
     @Override
     public void getPlayerByUsername(PlayerProto.PlayerUsernameRequest request, StreamObserver<McPlayerProto.PlayerResponse> responseObserver) {
-        Player player = this.mcPlayerService.getPlayerByUsername(request.getUsername());
+        McPlayerProto.PlayerResponse response = this.mcPlayerService.getPlayerByUsername(request.getUsername());
 
-        if (player == null) {
+        if (response == null) {
             responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
             return;
         }
 
-        responseObserver.onNext(this.convertPlayer(player));
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void searchPlayersByUsername(McPlayerProto.PlayerSearchRequest request, StreamObserver<McPlayerProto.PlayerSearchResponse> responseObserver) {
+        Page<McPlayerProto.PlayerResponse> playerPage = this.mcPlayerService.searchPlayerByUsername(request);
+
+        responseObserver.onNext(
+                McPlayerProto.PlayerSearchResponse.newBuilder()
+                        .addAllPlayers(playerPage.getContent())
+                        .setPage(playerPage.getNumber())
+                        .setTotalPages(playerPage.getTotalPages())
+                        .setTotalElements((int) playerPage.getTotalElements())
+                        .build()
+        );
         responseObserver.onCompleted();
     }
 
@@ -79,8 +91,8 @@ public class McPlayerController extends McPlayerGrpc.McPlayerImplBase {
     public void getPlayerSessions(McPlayerProto.PageablePlayerRequest request, StreamObserver<McPlayerProto.PlayerSessionsResponse> responseObserver) {
         Page<PlayerSession> sessionsPage = this.mcPlayerService.getPlayerSessions(UUID.fromString(request.getPlayerId()), request.getPage());
 
-        List<McPlayerProto.PlayerSessionsResponse.PlayerSession> sessions = sessionsPage
-                .map(session -> McPlayerProto.PlayerSessionsResponse.PlayerSession.newBuilder()
+        List<McPlayerProto.PlayerSession> sessions = sessionsPage
+                .map(session -> McPlayerProto.PlayerSession.newBuilder()
                         .setSessionId(session.getId().toString())
                         .setLoginTime(GrpcTimestampConverter.convertMillis(session.getId().getTimestamp() * 1000L))
                         .setLogoutTime(GrpcTimestampConverter.convert(session.getLogoutTime().toInstant()))
