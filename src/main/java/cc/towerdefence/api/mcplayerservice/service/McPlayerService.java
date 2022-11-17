@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -52,12 +51,12 @@ public class McPlayerService {
         return this.convertPlayer(player);
     }
 
-    public Page<McPlayerProto.PlayerResponse> searchPlayerByUsername(McPlayerProto.PlayerSearchRequest request) {
+    public Page<McPlayerProto.PlayerResponse> searchPlayerByUsername(McPlayerProto.McPlayerSearchRequest request) {
         String username = request.getUsername();
         Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
-        McPlayerProto.PlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
+        McPlayerProto.McPlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
 
-        // todo implement methods
+        // todo implement friend methods
         Page<Player> page = switch (filterMethod) {
             case NONE -> this.playerRepository.findAllByCurrentUsernameIgnoreCaseOrderById(username, pageable);
             case ONLINE -> this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
@@ -73,7 +72,7 @@ public class McPlayerService {
         return this.playerSessionRepository.findAllByPlayerIdOrderByIdDesc(playerId, PageRequest.of(page, 10));
     }
 
-    public String onPlayerLogin(McPlayerProto.PlayerLoginRequest request) {
+    public String onPlayerLogin(McPlayerProto.McPlayerLoginRequest request) {
         UUID playerId = UUID.fromString(request.getPlayerId());
         Date date = Date.from(Instant.now());
         Optional<Player> optionalPlayer = this.playerRepository.findById(playerId);
@@ -108,7 +107,7 @@ public class McPlayerService {
         return session.getId().toHexString();
     }
 
-    public void onPlayerDisconnect(McPlayerProto.PlayerDisconnectRequest request) {
+    public void onPlayerDisconnect(McPlayerProto.McPlayerDisconnectRequest request) {
         UUID playerId = UUID.fromString(request.getPlayerId());
 
         PlayerSession session = this.playerSessionRepository.findById(new ObjectId(request.getSessionId())).orElseThrow();
