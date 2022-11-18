@@ -52,7 +52,7 @@ public class McPlayerService {
     }
 
     public Page<McPlayerProto.PlayerResponse> searchPlayerByUsername(McPlayerProto.McPlayerSearchRequest request) {
-        String username = request.getUsername();
+        String username = request.getSearchUsername();
         Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
         McPlayerProto.McPlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
 
@@ -61,7 +61,7 @@ public class McPlayerService {
             case NONE -> this.playerRepository.findAllByCurrentUsernameIgnoreCaseOrderById(username, pageable);
             case ONLINE -> this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
             case FRIENDS -> throw new UnsupportedOperationException("Not implemented yet");
-            case UNRECOGNIZED -> throw new UnsupportedOperationException("Not implemented yet");
+            case UNRECOGNIZED -> throw new UnsupportedOperationException("Unrecognized filter method");
         };
 
         return page.map(this::convertPlayer);
