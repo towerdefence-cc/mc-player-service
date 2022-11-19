@@ -14,6 +14,10 @@ import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -31,6 +35,7 @@ public class McPlayerService {
     private final PlayerRepository playerRepository;
     private final PlayerSessionRepository playerSessionRepository;
     private final PlayerUsernameRepository playerUsernameRepository;
+    private final MongoTemplate mongoTemplate;
 
     public McPlayerProto.PlayerResponse getPlayer(UUID uuid) {
         return this.playerRepository.findById(uuid).map(this::convertPlayer).orElse(null);
@@ -56,14 +61,22 @@ public class McPlayerService {
         Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
         McPlayerProto.McPlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
 
+        Query query = Query.query(Criteria.where("currentUsername").regex("^" + username, "i"));
+
         // todo implement friend methods
-        Page<Player> page = switch (filterMethod) {
-            case NONE -> this.playerRepository.findAllByCurrentUsernameIgnoreCaseOrderById(username, pageable);
-            case ONLINE ->
-                    this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
+        List<Player> list = switch (filterMethod) {
+            case NONE -> this.mongoTemplate.find(query, Player.class);
+            case ONLINE -> {
+                query.addCriteria(Criteria.where("currentlyOnline").is(true));
+                yield this.mongoTemplate.find(query, Player.class);
+            }
             case FRIENDS -> throw new UnsupportedOperationException("Not implemented yet");
             case UNRECOGNIZED -> throw new UnsupportedOperationException("Unrecognized filter method");
         };
+
+        Page<Player> page = PageableExecutionUtils.getPage(
+                list, pageable, () -> this.mongoTemplate.count(query, Player.class)
+        );
 
         return page.map(this::convertPlayer);
 
