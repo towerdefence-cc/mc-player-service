@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,13 @@ public interface PlayerSessionRepository extends MongoRepository<PlayerSession, 
 
     @Query(value = "{ 'playerId' : ?0, 'logoutTime' : null }")
     Optional<PlayerSession> findActiveSessionByPlayerId(UUID playerId);
+
+    /**
+     * Used for finding dead sessions of a player
+     *
+     * @param playerId the player id
+     * @return a list of active sessions (where the logout time is not set)
+     */
+    @Query(value = "{ 'playerId' : ?0, 'logoutTime' : null }")
+    List<PlayerSession> findActiveSessionsByPlayerId(UUID playerId);
 }

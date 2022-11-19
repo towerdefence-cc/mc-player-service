@@ -59,7 +59,8 @@ public class McPlayerService {
         // todo implement friend methods
         Page<Player> page = switch (filterMethod) {
             case NONE -> this.playerRepository.findAllByCurrentUsernameIgnoreCaseOrderById(username, pageable);
-            case ONLINE -> this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
+            case ONLINE ->
+                    this.playerRepository.findAllByCurrentUsernameAndCurrentlyOnlineOrderById(username, true, pageable);
             case FRIENDS -> throw new UnsupportedOperationException("Not implemented yet");
             case UNRECOGNIZED -> throw new UnsupportedOperationException("Unrecognized filter method");
         };
@@ -76,8 +77,9 @@ public class McPlayerService {
         UUID playerId = UUID.fromString(request.getPlayerId());
         Date date = Date.from(Instant.now());
         Optional<Player> optionalPlayer = this.playerRepository.findById(playerId);
-
         boolean updatedUsername = optionalPlayer.isEmpty() || !optionalPlayer.get().getCurrentUsername().equals(request.getUsername());
+
+        this.resolveDeadSessions(playerId);
 
         Player player;
         if (optionalPlayer.isEmpty()) {
@@ -107,6 +109,19 @@ public class McPlayerService {
         return session.getId().toHexString();
     }
 
+    /**
+     * Called on login and will check if there are any current sessions that haven't been marked expired.
+     *
+     * @param playerId The player id
+     */
+    private void resolveDeadSessions(UUID playerId) {
+        List<PlayerSession> deadSessions = this.playerSessionRepository.findActiveSessionsByPlayerId(playerId);
+        for (PlayerSession session : deadSessions) {
+            session.setLogoutTime(session.getId().getDate());
+        }
+        this.playerSessionRepository.saveAll(deadSessions);
+    }
+
     public void onPlayerDisconnect(McPlayerProto.McPlayerDisconnectRequest request) {
         UUID playerId = UUID.fromString(request.getPlayerId());
 
@@ -128,13 +143,13 @@ public class McPlayerService {
                 .setLoginTime(GrpcTimestampConverter.convertMillis(session.getId().getTimestamp() * 1000L));
 
         if (session.getLogoutTime() != null)
-                builder.setLogoutTime(GrpcTimestampConverter.convert(session.getLogoutTime().toInstant()));
+            builder.setLogoutTime(GrpcTimestampConverter.convert(session.getLogoutTime().toInstant()));
 
         return builder.build();
     }
 
     private McPlayerProto.PlayerResponse convertPlayer(Player player) {
-        McPlayerProto.PlayerResponse.Builder builder =  McPlayerProto.PlayerResponse.newBuilder()
+        McPlayerProto.PlayerResponse.Builder builder = McPlayerProto.PlayerResponse.newBuilder()
                 .setId(player.getId().toString())
                 .setCurrentUsername(player.getCurrentUsername())
                 .setFirstLogin(GrpcTimestampConverter.convert(player.getFirstLogin().toInstant()))
