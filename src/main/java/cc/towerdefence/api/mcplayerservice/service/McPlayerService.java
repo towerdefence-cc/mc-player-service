@@ -58,10 +58,13 @@ public class McPlayerService {
 
     public Page<McPlayerProto.PlayerResponse> searchPlayerByUsername(McPlayerProto.McPlayerSearchRequest request) {
         String username = request.getSearchUsername();
-        Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
+        UUID issuerId = UUID.fromString(request.getIssuerId());
         McPlayerProto.McPlayerSearchRequest.FilterMethod filterMethod = request.getFilterMethod();
 
-        Query query = Query.query(Criteria.where("currentUsername").regex("^" + username, "i"));
+        Pageable pageable = PageRequest.of(request.getPage(), request.getPageSize());
+
+        Query query = Query.query(Criteria.where("currentUsername").regex("^" + username, "i"))
+                .addCriteria(Criteria.where("_id").ne(issuerId));
 
         // todo implement friend methods
         List<Player> list = switch (filterMethod) {
